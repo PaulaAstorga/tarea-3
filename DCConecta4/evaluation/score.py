@@ -72,3 +72,28 @@ def chat_gpt_eval(board, player: int) -> float:
 
  
 #--- AÑADE AQUÍ TUS FUNCIONES DE EVALUACIÓN  ---#
+
+
+def simple_aggressive_eval(board, player_id):
+    opponent_id = 3 - player_id
+    score = 0
+
+    # Ponderaciones simples
+    WEIGHT_THREE = 10
+    WEIGHT_TWO = 3
+    CENTER_BONUS = 2
+
+    # Ofensiva
+    score += BoardHelper.count_consecutive_pieces(board, player_id, 3) * WEIGHT_THREE
+    score += BoardHelper.count_consecutive_pieces(board, player_id, 2) * WEIGHT_TWO
+
+    # Defensa
+    score -= BoardHelper.count_consecutive_pieces(board, opponent_id, 3) * WEIGHT_THREE
+    score -= BoardHelper.count_consecutive_pieces(board, opponent_id, 2) * WEIGHT_TWO
+
+    # Centro del tablero (columna central)
+    center_col = [board[i][3] for i in range(6)]
+    center_count = center_col.count(player_id)
+    score += center_count * CENTER_BONUS
+
+    return score

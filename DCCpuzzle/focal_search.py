@@ -22,8 +22,8 @@ class FocalSearch:
 
     def solve(self):
         # MODIFICAR ESTO EN BASE A VERSIÓN DE FOCAL SEARCH
-        return self.heuristic_search(self.weight) # <-- para focal_search
-        # return self.discrepancy_search(self.weight) # <- para focal_discrepancy_search
+        #return self.heuristic_search(self.weight) # <-- para focal_search
+        return self.discrepancy_search(self.weight) # <- para focal_discrepancy_search
     
     def heuristic_search(self, focal_w=1):
         # Completar
@@ -32,6 +32,64 @@ class FocalSearch:
         - open list (self.open, heap 0) ordenada por f_adm = g + adm_h
         - focal list (self.preferred, heap 1) ordenada por h_inad
         """
+        # inicializamos estructuras
+        t0 = time.time()
+        self.expansions = 0
+        self.open.clear()
+        self.preferred.clear()
+        self.generated = {}
+
+        # nodo raíz
+        root = MultiNode(self.initial_state)
+        root.g = 0
+        root.h[0] = self.adm_h(self.initial_state)
+        root.key[0] = self.fvalue(root.g, root.h[0])  # f_adm para open
+        root.key[1] = self.inad_h(self.initial_state) # h_inad para focal
+
+        # insertamos en open y focal
+        self.open.insert(root)
+        self.preferred.insert(root)
+        self.generated[self.initial_state] = root
+
+        # bucle principal
+        while not self.preferred.is_empty():
+            if time.time() - t0 > 1800:
+                print("TIME OUT")
+                return SearchResult([], self.expansions, (time.time() - t0) * 1000)
+
+            f_min = self.open.top().key[0]
+            node = self.preferred.extract()
+            self.open.extract(node.heap_index[0])
+            self.expansions += 1
+
+            if node.state.is_goal():
+                elapsed = (time.time() - t0) * 1000
+                return SearchResult(node.path(), self.expansions, elapsed)
+
+            for child_state, action, cost, _ in node.state.h_successors(self.inad_h):
+                g2 = node.g + cost
+                child = self.generated.get(child_state)
+
+                if child is None or g2 < child.g:
+                    if child is None:
+                        child = MultiNode(child_state)
+                        self.generated[child_state] = child
+
+                    child.parent = node
+                    child.action = action
+                    child.g = g2
+                    child.h[0] = self.adm_h(child_state)
+
+                    child.key[0] = self.fvalue(child.g, child.h[0])  # f_adm
+                    child.key[1] = self.inad_h(child_state)          # h_inad
+
+                    self.open.insert(child)
+                    if child.key[0] <= focal_w * f_min:
+                        self.preferred.insert(child)
+
+        # si no se encontró solución
+        elapsed = (time.time() - t0) * 1000
+        return SearchResult([], self.expansions, elapsed)
     
     def discrepancy_search(self, focal_w=1): 
         # NO MODIFICAR

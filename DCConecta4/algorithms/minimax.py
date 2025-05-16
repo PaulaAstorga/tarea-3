@@ -19,17 +19,22 @@ def minimax(board_array, player_id, fixed_player_id, depth, max_player, use_alph
                 if best_score < score:
                     best_score = score
                     best_move = move
-                
-                ### PODA ALPHA-BETA
-                ### MODICAR 
+                # poda beta    
+                if use_alphabeta:
+                    alpha = max(alpha, best_score)
+                if beta <= alpha:
+                    break 
 
+            # poda alpha
             else:
                 if best_score > score:
                     best_score = score
                     best_move = move
+                if use_alphabeta:
+                    beta = min(beta, best_score)
+                if beta <= alpha:
+                    break  
 
                 ### PODA ALPHA-BETA
-                ### MODICAR 
-                
 
         return best_score, best_move

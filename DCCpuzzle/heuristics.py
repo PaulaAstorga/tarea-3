@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 import os
 from litemodel import LiteModel, from_file, from_keras_model
+from math import sqrt
 
 # NO MODIFICAR
 _model_nn = None
@@ -16,6 +17,10 @@ def get_heuristic(heuristic):
         return manhattan
     elif heuristic == "euclidian":
         return euclidian
+    elif heuristic == "smart_heuristic":
+        return smart_heuristic
+    elif heuristic == "corner_boost":
+        return corner_boost
     elif heuristic == "nn":
         _load_nn_model()
         return nn_policy
@@ -75,4 +80,97 @@ def manhattan(state):
 
 def euclidian(state):
     # Completar - Parte 2
-    return 0
+    objetivo = {
+        "1": (0, 0), "2": (0, 1), "3": (0, 2), "4": (0, 3),
+        "5": (1, 0), "6": (1, 1), "7": (1, 2), "8": (1, 3),
+        "9": (2, 0), "10": (2, 1), "11": (2, 2), "12": (2, 3),
+        "13": (3, 0), "14": (3, 1), "15": (3, 2),
+        "X": (3, 3) 
+    }
+    dist = 0
+    for i in range(4):
+        for j in range(4):
+            val = state.board[i][j]
+            gx, gy = objetivo[val]
+            dist += sqrt((i - gx)**2 + (j - gy)**2)
+            
+    return dist
+
+
+def smart_heuristic(state):
+    objetivo = {
+        "1": (0, 0), "2": (0, 1), "3": (0, 2), "4": (0, 3),
+        "5": (1, 0), "6": (1, 1), "7": (1, 2), "8": (1, 3),
+        "9": (2, 0), "10": (2, 1), "11": (2, 2), "12": (2, 3),
+        "13": (3, 0), "14": (3, 1), "15": (3, 2),
+        "X": (3, 3) 
+    }
+    dist = 0
+
+    # distancia euclidiana
+    for i in range(4):
+        for j in range(4):
+            val = state.board[i][j]
+            if val == "X":
+                continue
+            gx, gy = objetivo[val]
+            dist += sqrt((i - gx)**2 + (j - gy)**2)
+
+    # conflictos lineales en filas
+    for fila in range(4):
+        for col1 in range(4):
+            for col2 in range(col1 + 1, 4):
+                val1 = state.board[fila][col1]
+                val2 = state.board[fila][col2]
+                if val1 == "X" or val2 == "X":
+                    continue
+                gx1, _ = objetivo[val1]
+                gx2, _ = objetivo[val2]
+                if gx1 == fila and gx2 == fila and int(val1) > int(val2):
+                    dist += 2
+
+    # conflictos lineales en columnas
+    for col in range(4):
+        for fila1 in range(4):
+            for fila2 in range(fila1 + 1, 4):
+                val1 = state.board[fila1][col]
+                val2 = state.board[fila2][col]
+                if val1 == "X" or val2 == "X":
+                    continue
+                _, gy1 = objetivo[val1]
+                _, gy2 = objetivo[val2]
+                if gy1 == col and gy2 == col and int(val1) > int(val2):
+                    dist += 2
+
+    return dist
+
+# aquí creamos la heurísitica no admisible.
+def corner_boost(state):
+    objetivo = {
+        "1": (0, 0), "2": (0, 1), "3": (0, 2), "4": (0, 3),
+        "5": (1, 0), "6": (1, 1), "7": (1, 2), "8": (1, 3),
+        "9": (2, 0), "10": (2, 1), "11": (2, 2), "12": (2, 3),
+        "13": (3, 0), "14": (3, 1), "15": (3, 2), "X": (3, 3)
+    }
+
+    dist = 0
+    recompensa = 0
+
+    esquinas = {
+        "1": (0, 0),
+        "4": (0, 3),
+        "13": (3, 0),
+        "15": (3, 2)
+    }
+
+    for i in range(4):
+        for j in range(4):
+            val = state.board[i][j]
+            gx, gy = objetivo[val]
+            dist += sqrt((i - gx)**2 + (j - gy)**2)
+
+            # bonificación si una ficha de esquina está bien posicionada
+            if val in esquinas and (i, j) == esquinas[val]:
+                recompensa += 1.5  # aumenta el incentivo por esquina bien puesta
+
+    return dist - recompensa
